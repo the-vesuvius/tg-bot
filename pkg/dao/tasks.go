@@ -13,6 +13,9 @@ import (
 type Tasks interface {
 	InsertTask(task *models.Task) (*models.Task, error)
 	GetTaskById(taskId int64) (*models.Task, error)
+	GetInProgressTasksByUserId(userId int64) ([]*models.Task, error)
+	UpdateTasksStatus(taskIds []int64, status string) error
+	GetUsersTasksByStatus(userId int64, status string) ([]*models.Task, error)
 }
 
 type tasks struct {
@@ -66,4 +69,66 @@ func (t *tasks) GetTaskById(taskId int64) (*models.Task, error) {
 	}
 
 	return &task, nil
+}
+
+func (t *tasks) GetInProgressTasksByUserId(userId int64) ([]*models.Task, error) {
+	query := sq.Select("id", "user_id", "url", "status", "created_at", "updated_at").
+		From("tasks").
+		Where(sq.Eq{"user_id": userId}).
+		Where(sq.Eq{"status": models.TaskStatusInProgress})
+
+	rows, err := query.RunWith(t.db).Query()
+	if err != nil {
+		return nil, err
+	}
+
+	var tasksList = make([]*models.Task, 0)
+	for rows.Next() {
+		var task models.Task
+		err := rows.Scan(&task.Id, &task.UserId, &task.Url, &task.Status, &task.CreatedAt, &task.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		tasksList = append(tasksList, &task)
+	}
+
+	return tasksList, nil
+}
+
+func (t *tasks) UpdateTasksStatus(taskIds []int64, status string) error {
+	query := sq.Update("tasks").
+		Set("status", status).
+		Set("updated_at", sq.Expr("NOW()")).
+		Where(sq.Eq{"id": taskIds})
+
+	_, err := query.RunWith(t.db).Exec()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t *tasks) GetUsersTasksByStatus(userId int64, status string) ([]*models.Task, error) {
+	query := sq.Select("id", "user_id", "url", "status", "created_at", "updated_at").
+		From("tasks").
+		Where(sq.Eq{"user_id": userId}).
+		Where(sq.Eq{"status": status})
+
+	rows, err := query.RunWith(t.db).Query()
+	if err != nil {
+		return nil, err
+	}
+
+	var tasksList = make([]*models.Task, 0)
+	for rows.Next() {
+		var task models.Task
+		err := rows.Scan(&task.Id, &task.UserId, &task.Url, &task.Status, &task.CreatedAt, &task.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		tasksList = append(tasksList, &task)
+	}
+
+	return tasksList, nil
 }

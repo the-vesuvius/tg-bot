@@ -3,9 +3,9 @@ package models
 import "time"
 
 const (
-	TaskStatusNew       = "NEW"
-	TaskStatusInProcess = "IN_PROCESS"
-	TaskStatusDone      = "DONE"
+	TaskStatusNew        = "NEW"
+	TaskStatusInProgress = "IN_PROGRESS"
+	TaskStatusDone       = "DONE"
 )
 
 type TaskStatus string
