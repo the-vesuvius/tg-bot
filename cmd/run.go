@@ -3,6 +3,7 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
+	"github.com/golang-migrate/migrate/v4"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"tg_bot/db"
 	"tg_bot/logger"
 	"tg_bot/pkg/bot"
+	"tg_bot/pkg/dao"
 )
 
 func InitRunCommand() *cobra.Command {
@@ -44,24 +46,32 @@ func InitRunCommand() *cobra.Command {
 				logger.Get().Error("Please set the TG_BOT_DB_PORT environment variable")
 				os.Exit(1)
 			}
-			botApp, err := bot.NewBot(apiKey)
-			if err != nil {
-				logger.Get().Error("Bot app could not be created", zap.Error(err))
-				os.Exit(1)
-			}
 
 			dbConnUrl := fmt.Sprintf("%s:%s@tcp(%s:%s)/read_that_bot?parseTime=true", dbUser, dbPass, dbHost, dbPort)
-			_, err = sql.Open("mysql", dbConnUrl)
+			dbConn, err := sql.Open("mysql", dbConnUrl)
 			if err != nil {
 				logger.Get().Error("DB connection failed", zap.Error(err))
+				os.Exit(1)
+			}
+			defer dbConn.Close()
+
+			usersDao := dao.NewUsers(dbConn)
+
+			botApp, err := bot.NewBot(apiKey, usersDao)
+			if err != nil {
+				logger.Get().Error("Bot app could not be created", zap.Error(err))
 				os.Exit(1)
 			}
 
 			migrator := db.NewMigrator(dbConnUrl)
 			err = migrator.Migrate()
 			if err != nil {
-				logger.Get().Error("DB migration failed", zap.Error(err))
-				os.Exit(1)
+				if err == migrate.ErrNoChange {
+					logger.Get().Info("DB already migrated")
+				} else {
+					logger.Get().Error("DB migration failed", zap.Error(err))
+					os.Exit(1)
+				}
 			}
 
 			var exit = make(chan os.Signal, 1)
