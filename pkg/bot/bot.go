@@ -15,9 +15,10 @@ type Bot struct {
 	key      string
 	botApi   *tgbotapi.BotAPI
 	usersDao dao.Users
+	tasksDao dao.Tasks
 }
 
-func NewBot(key string, usersDao dao.Users) (*Bot, error) {
+func NewBot(key string, usersDao dao.Users, tasksDao dao.Tasks) (*Bot, error) {
 	bot, err := tgbotapi.NewBotAPI(key)
 	if err != nil {
 		return nil, err
@@ -27,6 +28,7 @@ func NewBot(key string, usersDao dao.Users) (*Bot, error) {
 		key:      key,
 		botApi:   bot,
 		usersDao: usersDao,
+		tasksDao: tasksDao,
 	}, nil
 }
 
@@ -71,6 +73,10 @@ func (b *Bot) HandleStartCmd(update tgbotapi.Update) error {
 			})
 			if err != nil {
 				logger.Get().Error("Could not insert user", zap.Error(err))
+				sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
+				if sendErr != nil {
+					logger.Get().Error("Could not send message", zap.Error(sendErr))
+				}
 				return err
 			}
 		} else {
@@ -89,6 +95,52 @@ func (b *Bot) HandleStartCmd(update tgbotapi.Update) error {
 }
 
 func (b *Bot) HandleAddCmd(update tgbotapi.Update) error {
+	inputTgUserId := update.Message.From.ID
+	tgUserId := strconv.FormatInt(inputTgUserId, 10)
+
+	var user *models.User
+	user, err := b.usersDao.GetUserByExternalId(tgUserId)
+	if err != nil {
+		if errors.Is(err, &errs.ErrNotFound{}) {
+			user, err = b.usersDao.InsertUser(&models.User{
+				ExternalId: tgUserId,
+			})
+			if err != nil {
+				logger.Get().Error("Could not insert user", zap.Error(err))
+				sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
+				if sendErr != nil {
+					logger.Get().Error("Could not send message", zap.Error(sendErr))
+				}
+				return err
+			}
+		} else {
+			logger.Get().Error("Could not get user by external id", zap.Error(err))
+			return err
+		}
+	}
+
+	task := models.Task{
+		UserId: user.Id,
+		Url:    update.Message.CommandArguments(),
+		Status: models.TaskStatusNew,
+	}
+
+	_, err = b.tasksDao.InsertTask(&task)
+	if err != nil {
+		logger.Get().Error("Could not insert task", zap.Error(err))
+		sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
+		if sendErr != nil {
+			logger.Get().Error("Could not send message", zap.Error(sendErr))
+		}
+
+		return err
+	}
+
+	err = b.SendMessage(update.Message.Chat.ID, "Task added successfully")
+	if err != nil {
+		logger.Get().Error("Could not send message", zap.Error(err))
+		return err
+	}
 	return nil
 }
 

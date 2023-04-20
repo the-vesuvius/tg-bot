@@ -56,8 +56,9 @@ func InitRunCommand() *cobra.Command {
 			defer dbConn.Close()
 
 			usersDao := dao.NewUsers(dbConn)
+			tasksDao := dao.NewTasks(dbConn)
 
-			botApp, err := bot.NewBot(apiKey, usersDao)
+			botApp, err := bot.NewBot(apiKey, usersDao, tasksDao)
 			if err != nil {
 				logger.Get().Error("Bot app could not be created", zap.Error(err))
 				os.Exit(1)
