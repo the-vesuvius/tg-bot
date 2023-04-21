@@ -16,6 +16,7 @@ type Tasks interface {
 	GetInProgressTasksByUserId(userId int64) ([]*models.Task, error)
 	UpdateTasksStatus(taskIds []int64, status string) error
 	GetUsersTasksByStatus(userId int64, status string) ([]*models.Task, error)
+	GetUsersRandomTaskByStatus(userId int64, status string) (*models.Task, error)
 }
 
 type tasks struct {
@@ -131,4 +132,30 @@ func (t *tasks) GetUsersTasksByStatus(userId int64, status string) ([]*models.Ta
 	}
 
 	return tasksList, nil
+}
+
+func (t *tasks) GetUsersRandomTaskByStatus(userId int64, status string) (*models.Task, error) {
+	query := sq.Select("id", "user_id", "url", "status", "created_at", "updated_at").
+		From("tasks").
+		Where(sq.Eq{"user_id": userId}).
+		Where(sq.Eq{"status": status}).
+		OrderBy("RAND()").
+		Limit(1)
+
+	rows, err := query.RunWith(t.db).Query()
+	if err != nil {
+		return nil, err
+	}
+
+	var task models.Task
+	if rows.Next() {
+		err := rows.Scan(&task.Id, &task.UserId, &task.Url, &task.Status, &task.CreatedAt, &task.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errs.NewErrNotFound("Task", "user_id", strconv.FormatInt(userId, 10))
+	}
+
+	return &task, nil
 }
