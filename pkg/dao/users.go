@@ -25,8 +25,8 @@ func NewUsers(db *sql.DB) *users {
 }
 
 func (u *users) InsertUser(user *models.User) (*models.User, error) {
-	query := sq.Insert("users").Columns("external_id").
-		Values(user.ExternalId)
+	query := sq.Insert("users").Columns("external_id", "chat_id").
+		Values(user.ExternalId, user.ChatId)
 
 	res, err := query.RunWith(u.db).Exec()
 	if err != nil {

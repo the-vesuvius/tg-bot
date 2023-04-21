@@ -81,7 +81,7 @@ func (b *Bot) HandleStartCmd(update tgbotapi.Update) error {
 	inputTgUserId := update.Message.From.ID
 	tgUserId := strconv.FormatInt(inputTgUserId, 10)
 
-	_, err := b.ensureUserExists(tgUserId)
+	_, err := b.ensureUserExists(tgUserId, update.Message.Chat.ID)
 	if err != nil {
 		sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
 		if sendErr != nil {
@@ -103,7 +103,7 @@ func (b *Bot) HandleAddCmd(update tgbotapi.Update) error {
 	inputTgUserId := update.Message.From.ID
 	tgUserId := strconv.FormatInt(inputTgUserId, 10)
 
-	user, err := b.ensureUserExists(tgUserId)
+	user, err := b.ensureUserExists(tgUserId, update.Message.Chat.ID)
 	if err != nil {
 		sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
 		if sendErr != nil {
@@ -141,7 +141,7 @@ func (b *Bot) HandleDoneCmd(update tgbotapi.Update) error {
 	inputTgUserId := update.Message.From.ID
 	tgUserId := strconv.FormatInt(inputTgUserId, 10)
 
-	user, err := b.ensureUserExists(tgUserId)
+	user, err := b.ensureUserExists(tgUserId, update.Message.Chat.ID)
 	if err != nil {
 		sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
 		if sendErr != nil {
@@ -210,7 +210,7 @@ func (b *Bot) HandleCurrentCmd(update tgbotapi.Update) error {
 	inputTgUserId := update.Message.From.ID
 	tgUserId := strconv.FormatInt(inputTgUserId, 10)
 
-	user, err := b.ensureUserExists(tgUserId)
+	user, err := b.ensureUserExists(tgUserId, update.Message.Chat.ID)
 	if err != nil {
 		sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
 		if sendErr != nil {
@@ -253,7 +253,7 @@ func (b *Bot) HandleNextCmd(update tgbotapi.Update) error {
 	inputTgUserId := update.Message.From.ID
 	tgUserId := strconv.FormatInt(inputTgUserId, 10)
 
-	user, err := b.ensureUserExists(tgUserId)
+	user, err := b.ensureUserExists(tgUserId, update.Message.Chat.ID)
 	if err != nil {
 		sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
 		if sendErr != nil {
@@ -340,13 +340,14 @@ func (b *Bot) SendMessage(chatId int64, text string) error {
 	return nil
 }
 
-func (b *Bot) ensureUserExists(tgUserExternalId string) (*models.User, error) {
+func (b *Bot) ensureUserExists(tgUserExternalId string, chatId int64) (*models.User, error) {
 	var user *models.User
 	user, err := b.usersDao.GetUserByExternalId(tgUserExternalId)
 	if err != nil {
 		if errors.Is(err, &errs.ErrNotFound{}) {
 			user, err = b.usersDao.InsertUser(&models.User{
 				ExternalId: tgUserExternalId,
+				ChatId:     chatId,
 			})
 			if err != nil {
 				logger.Get().Error("Could not insert user", zap.Error(err))
