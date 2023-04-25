@@ -4,8 +4,7 @@ steps:
   - name: docker
     image: plugins/docker
     settings:
-      username:
-        from_secret: docker_username
+      username: vesuviusua
       password:
         from_secret: docker_pass
       repo: vesuviusua/tg-bot
