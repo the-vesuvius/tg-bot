@@ -262,7 +262,7 @@ func (b *Bot) HandleNextCmd(update tgbotapi.Update) error {
 		return err
 	}
 
-	task, err := b.next(user)
+	task, err := b.GetNextTask(user)
 	if err != nil {
 		if errors.Is(err, &errs.ErrNotFinished{}) {
 			var notFinishedErr *errs.ErrNotFinished
@@ -301,7 +301,7 @@ func (b *Bot) HandleNextCmd(update tgbotapi.Update) error {
 	return nil
 }
 
-func (b *Bot) next(user *models.User) (*models.Task, error) {
+func (b *Bot) GetNextTask(user *models.User) (*models.Task, error) {
 	inProgressTasks, err := b.tasksDao.GetUsersTasksByStatus(user.Id, models.TaskStatusInProgress)
 	if err != nil {
 		logger.Get().Error("Could not get tasks", zap.Error(err))
@@ -328,6 +328,47 @@ func (b *Bot) next(user *models.User) (*models.Task, error) {
 	}
 
 	return task, nil
+}
+
+func (b *Bot) SendReminders() error {
+	users, err := b.usersDao.GetAllUsers()
+	if err != nil {
+		logger.Get().Error("Could not get users", zap.Error(err))
+		return err
+	}
+
+	for _, user := range users {
+		task, err := b.GetNextTask(user)
+		if err != nil {
+			if errors.Is(err, &errs.ErrNotFinished{}) {
+				var notFinishedErr *errs.ErrNotFinished
+				errors.As(err, &notFinishedErr)
+				err = b.SendMessage(user.ChatId, "You have unfinished task. Please finish it first. Your current task is \n"+notFinishedErr.Task.Url)
+				if err != nil {
+					logger.Get().Error("Could not send message", zap.Error(err))
+				}
+				continue
+			}
+
+			if errors.Is(err, &errs.ErrNotFound{}) {
+				continue
+			}
+
+			err = b.SendMessage(user.ChatId, "Something went wrong, please try again later")
+			if err != nil {
+				logger.Get().Error("Could not send message", zap.Error(err))
+			}
+			continue
+		}
+
+		err = b.SendMessage(user.ChatId, fmt.Sprintf("Your next task is: \n%s", task.Url))
+		if err != nil {
+			logger.Get().Error("Could not send message", zap.Error(err))
+			continue
+		}
+	}
+
+	return nil
 }
 
 func (b *Bot) SendMessage(chatId int64, text string) error {

@@ -3,6 +3,7 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
+	"github.com/go-co-op/gocron"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -12,6 +13,7 @@ import (
 	"tg_bot/logger"
 	"tg_bot/pkg/bot"
 	"tg_bot/pkg/dao"
+	"time"
 )
 
 func InitRunCommand() *cobra.Command {
@@ -74,6 +76,17 @@ func InitRunCommand() *cobra.Command {
 					os.Exit(1)
 				}
 			}
+
+			s := gocron.NewScheduler(time.UTC)
+			s.Every(1).Day().At("17:00").Do(func() {
+				logger.Get().Info("Sending reminders")
+
+				err := botApp.SendReminders()
+				if err != nil {
+					logger.Get().Error("Failed to send reminders", zap.Error(err))
+				}
+			})
+			s.StartAsync()
 
 			var exit = make(chan os.Signal, 1)
 

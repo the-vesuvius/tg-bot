@@ -14,6 +14,7 @@ type Users interface {
 	InsertUser(user *models.User) (*models.User, error)
 	GetUserById(userId int64) (*models.User, error)
 	GetUserByExternalId(externalId string) (*models.User, error)
+	GetAllUsers() ([]*models.User, error)
 }
 
 type users struct {
@@ -93,4 +94,26 @@ func (u *users) GetUserByExternalId(externalId string) (*models.User, error) {
 	}
 
 	return &user, nil
+}
+
+func (u *users) GetAllUsers() ([]*models.User, error) {
+	query := sq.Select("id", "external_id", "chat_id", "created_at", "updated_at").
+		From("users")
+
+	rows, err := query.RunWith(u.db).Query()
+	if err != nil {
+		return nil, err
+	}
+
+	var users []*models.User
+	for rows.Next() {
+		var user models.User
+		err = rows.Scan(&user.Id, &user.ExternalId, &user.ChatId, &user.CreatedAt, &user.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+
+	return users, nil
 }
