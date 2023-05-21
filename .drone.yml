@@ -14,10 +14,8 @@ steps:
   - name: deploy
     image: appleboy/drone-ssh
     settings:
-      host:
-        from_secret: droplet_host
-      username:
-        from_secret: droplet_username
+      host: 64.225.102.134
+      username: root
       password:
         from_secret: droplet_password
       target: /root/projects/tg-bot
