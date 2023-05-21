@@ -22,6 +22,7 @@ steps:
         from_secret: ssh_private_key
       target: /root/projects/tg-bot
       script:
+        - docker login -u vesuviusua -p $DOCKER_PASS
         - docker-compose down
         - docker-compose pull
         - docker-compose up -d
