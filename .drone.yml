@@ -18,8 +18,8 @@ steps:
         from_secret: droplet_host
       username:
         from_secret: droplet_username
-      key:
-        from_secret: ssh_private_key
+      password:
+        from_secret: droplet_password
       target: /root/projects/tg-bot
       script:
         - docker-compose down
