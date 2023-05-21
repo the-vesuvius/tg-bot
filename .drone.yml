@@ -11,12 +11,17 @@ steps:
       repo: vesuviusua/tg-bot
       tags:
         - latest
-      host: 64.225.102.134
-
-      insecure: true
-      daemon_off: true
-      ssh_key:
-        username: root
+  - name: deploy
+    image: vesuviusua/tg-bot
+    settings:
+      host:
+        from_secret: droplet_host
+      username:
+        from_secret: droplet_username
+      key:
         from_secret: ssh_private_key
-      deploy_key:
-        from_secret: ssh_private_key
+      target: /root/projects/tg-bot
+      script:
+        - docker-compose down
+        - docker-compose pull
+        - docker-compose up -d
