@@ -1,5 +1,6 @@
 kind: pipeline
 name: default
+load: secrets
 steps:
   - name: docker
     image: plugins/docker
@@ -10,4 +11,10 @@ steps:
       repo: vesuviusua/tg-bot
       tags:
         - latest
-        - main
+      host: 64.225.102.134
+      insecure: true
+      daemon_off: true
+      ssh_key:
+        from_secret: ssh_private_key
+      deploy_key:
+        from_secret: ssh_private_key
