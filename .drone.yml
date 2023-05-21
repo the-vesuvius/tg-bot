@@ -12,9 +12,11 @@ steps:
       tags:
         - latest
       host: 64.225.102.134
+
       insecure: true
       daemon_off: true
       ssh_key:
+        username: root
         from_secret: ssh_private_key
       deploy_key:
         from_secret: ssh_private_key
