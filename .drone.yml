@@ -12,7 +12,7 @@ steps:
       tags:
         - latest
   - name: deploy
-    image: vesuviusua/tg-bot
+    image: appleboy/drone-ssh
     settings:
       host:
         from_secret: droplet_host
