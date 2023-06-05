@@ -1,6 +1,6 @@
 kind: pipeline
 name: default
-load: secrets
+
 steps:
   - name: docker
     image: plugins/docker
@@ -14,13 +14,13 @@ steps:
   - name: deploy
     image: appleboy/drone-ssh
     settings:
-      debug: true
       host: 64.225.102.134
       username: root
       password:
         from_secret: ssh_password
       target: /root/projects/tg-bot
       script:
+        - set -e
         - docker-compose down
         - docker-compose pull
         - docker-compose up -d
