@@ -90,7 +90,13 @@ func (b *Bot) HandleStartCmd(update tgbotapi.Update) error {
 		return err
 	}
 
-	err = b.SendMessage(update.Message.Chat.ID, "Hello, I'm @read_that_bot!")
+	err = b.SendMessage(update.Message.Chat.ID, "Hello, I'm @read_that_bot!\n"+
+		"I will remind you to read your articles from your reading list(at 5pm UTC, time currently isn't configurable).\n"+
+		"Use /add <article url> command to add new article to your reading list.\n"+
+		"Use /current command to get current article from your reading list.\n"+
+		"Use /done command to mark current article as read.\n"+
+		"Use /next command to get next article from your reading list(if you don't want to wait for the next time I remind you).\n",
+	)
 	if err != nil {
 		logger.Get().Error("Could not send message", zap.Error(err))
 		return err
