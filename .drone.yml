@@ -18,9 +18,9 @@ steps:
       username: root
       key:
         from_secret: ssh_private_key
-      target: /root/projects/tg-bot
       script:
         - set -e
+        - cd /root/projects/tg-bot
         - pwd
         - docker-compose down
         - docker-compose pull
