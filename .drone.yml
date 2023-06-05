@@ -16,8 +16,8 @@ steps:
     settings:
       host: 64.225.102.134
       username: root
-      password:
-        from_secret: ssh_password
+      key:
+        from_secret: ssh_private_key
       target: /root/projects/tg-bot
       script:
         - set -e
