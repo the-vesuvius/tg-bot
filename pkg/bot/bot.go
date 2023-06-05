@@ -6,6 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"go.uber.org/zap"
 	"strconv"
+	"strings"
 	"tg_bot/logger"
 	"tg_bot/pkg/dao"
 	"tg_bot/pkg/errs"
@@ -118,9 +119,19 @@ func (b *Bot) HandleAddCmd(update tgbotapi.Update) error {
 		return err
 	}
 
+	taskUrl := update.Message.CommandArguments()
+	taskUrl = strings.Trim(taskUrl, " ")
+	if taskUrl == "" {
+		sendErr := b.SendMessage(update.Message.Chat.ID, "Please provide article url")
+		if sendErr != nil {
+			logger.Get().Error("Could not send message", zap.Error(sendErr))
+		}
+		return errors.New("empty task url")
+	}
+
 	task := models.Task{
 		UserId: user.Id,
-		Url:    update.Message.CommandArguments(),
+		Url:    taskUrl,
 		Status: models.TaskStatusNew,
 	}
 
