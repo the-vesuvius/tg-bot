@@ -21,6 +21,7 @@ steps:
       target: /root/projects/tg-bot
       script:
         - set -e
+        - pwd
         - docker-compose down
         - docker-compose pull
         - docker-compose up -d
