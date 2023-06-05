@@ -13,8 +13,8 @@ steps:
         - latest
   - name: deploy
     image: appleboy/drone-ssh
-    debug: true
     settings:
+      debug: true
       host: 64.225.102.134
       username: root
       password:
