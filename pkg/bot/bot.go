@@ -73,6 +73,11 @@ func (b *Bot) Run() {
 				if err != nil {
 					logger.Get().Error("HandleNextCmd failed", zap.Error(err))
 				}
+			case "skip":
+				err := b.HandleSkipCmd(update)
+				if err != nil {
+					logger.Get().Error("HandleSkipCmd failed", zap.Error(err))
+				}
 			}
 		}
 	}
@@ -277,6 +282,87 @@ func (b *Bot) HandleNextCmd(update tgbotapi.Update) error {
 			logger.Get().Error("Could not send message", zap.Error(sendErr))
 		}
 		return err
+	}
+
+	task, err := b.GetNextTask(user)
+	if err != nil {
+		if errors.Is(err, &errs.ErrNotFinished{}) {
+			var notFinishedErr *errs.ErrNotFinished
+			errors.As(err, &notFinishedErr)
+			sendErr := b.SendMessage(update.Message.Chat.ID, "You have unfinished task. Please finish it first. Your current task is \n"+notFinishedErr.Task.Url)
+			if sendErr != nil {
+				logger.Get().Error("Could not send message", zap.Error(sendErr))
+				return err
+			}
+			return sendErr
+		}
+
+		if errors.Is(err, &errs.ErrNotFound{}) {
+			sendErr := b.SendMessage(update.Message.Chat.ID, "There is no tasks available. Please add some tasks first")
+			if sendErr != nil {
+				logger.Get().Error("Could not send message", zap.Error(sendErr))
+				return sendErr
+			}
+			return sendErr
+		}
+
+		sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
+		if sendErr != nil {
+			logger.Get().Error("Could not send message", zap.Error(sendErr))
+		}
+
+		return err
+	}
+
+	err = b.SendMessage(update.Message.Chat.ID, fmt.Sprintf("Your next task is: \n%s", task.Url))
+	if err != nil {
+		logger.Get().Error("Could not send message", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func (b *Bot) HandleSkipCmd(update tgbotapi.Update) error {
+	inputTgUserId := update.Message.From.ID
+	tgUserId := strconv.FormatInt(inputTgUserId, 10)
+
+	user, err := b.ensureUserExists(tgUserId, update.Message.Chat.ID)
+	if err != nil {
+		sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
+		if sendErr != nil {
+			logger.Get().Error("Could not send message", zap.Error(sendErr))
+		}
+		return err
+	}
+
+	tasks, err := b.tasksDao.GetInProgressTasksByUserId(user.Id)
+	if err != nil {
+		logger.Get().Error("Could not get tasks", zap.Error(err))
+		sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
+		if sendErr != nil {
+			logger.Get().Error("Could not send message", zap.Error(sendErr))
+		}
+
+		return err
+	}
+
+	if len(tasks) >= 0 {
+		var taskIds []int64
+		for _, task := range tasks {
+			taskIds = append(taskIds, task.Id)
+		}
+
+		err = b.tasksDao.UpdateTasksStatus(taskIds, models.TaskStatusNew)
+		if err != nil {
+			logger.Get().Error("Could not update tasks", zap.Error(err))
+			sendErr := b.SendMessage(update.Message.Chat.ID, "Something went wrong, please try again later")
+			if sendErr != nil {
+				logger.Get().Error("Could not send message", zap.Error(sendErr))
+			}
+
+			return err
+		}
 	}
 
 	task, err := b.GetNextTask(user)
